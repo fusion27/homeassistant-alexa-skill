@@ -47,7 +47,7 @@ export class LambdaStack extends cdk.Stack {
 
     const fn = new lambda.Function(this, 'AlexaSkillHandler', {
       functionName: 'ha-alexa-skill-handler',
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../lambda'), {
         bundling: {
@@ -60,7 +60,7 @@ export class LambdaStack extends cdk.Stack {
               return true;
             },
           },
-          image: lambda.Runtime.NODEJS_20_X.bundlingImage,
+          image: lambda.Runtime.NODEJS_22_X.bundlingImage,
           command: [
             'bash', '-c',
             'npm ci && npm run build && cp -r dist/* /asset-output/ && cp -r node_modules /asset-output/node_modules',

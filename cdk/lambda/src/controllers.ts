@@ -12,16 +12,6 @@ const TYPE_TO_DOMAIN: Record<string, string> = {
   COVER: 'cover',
 };
 
-const FRUNK_JOKES = [
-  "I'm sorry, but the front trunk closure actuator is not equipped with a reverse-polarity electromagnetic latch motor. Manual intervention required.",
-  "Negative. The front trunk lid reintegration sequence requires biometric confirmation and a minimum of two carbon-fiber-reinforced human appendages.",
-  "Error 418: Front trunk closure protocol unavailable. The pneumatic hinge dampener does not support remote re-engagement. Please proceed manually.",
-  "That action is outside my operational parameters. The front trunk utilizes a passive gravity-assisted open state with no motorized return-to-closed capability. You're gonna have to touch it.",
-  "Front trunk closure via voice command is not supported by the onboard Tesla Fleet API closure subsystem. Kindly apply approximately 15 newtons of downward force to the lid.",
-  "I've consulted the Tesla Fleet API documentation, three Stack Overflow threads, and two Reddit posts. The consensus is: go push it down yourself.",
-  "Initiating front trunk closure... just kidding. There's no motor. That's a you problem.",
-];
-
 function resolveService(domain: string, name: string): string {
   if (domain === 'cover') {
     return name === 'TurnOn' ? 'open_cover' : 'close_cover';
@@ -35,7 +25,6 @@ export async function handleController(event: any): Promise<any> {
   const endpointId: string = event.directive.endpoint.endpointId;
   const cookie = event.directive.endpoint.cookie ?? {};
   const haType: string | undefined = cookie.haType;
-  const coverType: string | undefined = cookie.coverType;
   const entityId: string = cookie.haEntityId ?? endpointId;
   const domain: string = haType ? (TYPE_TO_DOMAIN[haType] ?? endpointId.split('.')[0]) : endpointId.split('.')[0];
 
@@ -44,45 +33,12 @@ export async function handleController(event: any): Promise<any> {
 
     if (namespace === 'Alexa.ModeController') {
       const mode: string = event.directive.payload.mode; // 'Position.Open' | 'Position.Closed'
-      if (domain === 'cover' && coverType === 'FRUNK' && mode === 'Position.Closed') {
-        const joke = FRUNK_JOKES[Math.floor(Math.random() * FRUNK_JOKES.length)];
-        return {
-          event: {
-            header: {
-              namespace: 'Alexa',
-              name: 'ErrorResponse',
-              payloadVersion: '3',
-              messageId: uuidv4(),
-              correlationToken: event.directive.header.correlationToken,
-            },
-            endpoint: { endpointId },
-            payload: { type: 'ENDPOINT_UNREACHABLE', message: joke },
-          },
-        };
-      }
       command = {
         domain,
         service: mode === 'Position.Open' ? 'open_cover' : 'close_cover',
         entity_id: entityId,
       };
     } else if (namespace === 'Alexa.PowerController') {
-      // Frunk close via PowerController fallback
-      if (domain === 'cover' && coverType === 'FRUNK' && name === 'TurnOff') {
-        const joke = FRUNK_JOKES[Math.floor(Math.random() * FRUNK_JOKES.length)];
-        return {
-          event: {
-            header: {
-              namespace: 'Alexa',
-              name: 'ErrorResponse',
-              payloadVersion: '3',
-              messageId: uuidv4(),
-              correlationToken: event.directive.header.correlationToken,
-            },
-            endpoint: { endpointId },
-            payload: { type: 'ENDPOINT_UNREACHABLE', message: joke },
-          },
-        };
-      }
       command = {
         domain,
         service: resolveService(domain, name),
