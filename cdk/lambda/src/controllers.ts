@@ -49,8 +49,20 @@ export async function handleController(event: any): Promise<any> {
 
     await publishCommand(command);
 
+    const context = namespace === 'Alexa.PowerController'
+      ? {
+          properties: [{
+            namespace: 'Alexa.PowerController',
+            name: 'powerState',
+            value: name === 'TurnOn' ? 'ON' : 'OFF',
+            timeOfSample: new Date().toISOString(),
+            uncertaintyInMilliseconds: 500,
+          }],
+        }
+      : {};
+
     return {
-      context: {},
+      context,
       event: {
         header: {
           namespace: 'Alexa',
