@@ -72,7 +72,6 @@ export async function handleController(event: any): Promise<any> {
           payloadVersion: '3',
         },
         endpoint: {
-          scope: event.directive.endpoint.scope,
           endpointId,
         },
         payload: {},
