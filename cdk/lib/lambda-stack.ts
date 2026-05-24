@@ -76,14 +76,15 @@ export class LambdaStack extends cdk.Stack {
       },
     });
 
+    fn.addPermission('AlexaSmartHomeTrigger', {
+      principal: new iam.ServicePrincipal('alexa-connectedhome.amazon.com'),
+      action: 'lambda:InvokeFunction',
+      eventSourceToken: 'amzn1.ask.skill.081f3588-e829-4c0d-b282-10d0dd9ea168',
+    });
+
     new cdk.CfnOutput(this, 'LambdaArn', {
       value: fn.functionArn,
       description: 'Lambda ARN — paste into Alexa Developer Console as skill endpoint',
-    });
-
-    new cdk.CfnOutput(this, 'LambdaArnNote', {
-      value: 'Add Alexa Smart Home trigger manually in Lambda console after creating the skill',
-      description: 'Reminder',
     });
   }
 }
