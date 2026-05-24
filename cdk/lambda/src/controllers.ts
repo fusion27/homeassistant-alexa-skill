@@ -24,8 +24,7 @@ const FRUNK_JOKES = [
 
 function resolveService(domain: string, name: string): string {
   if (domain === 'cover') {
-    const isOpen = name === 'Unlock' || name === 'TurnOn';
-    return isOpen ? 'open_cover' : 'close_cover';
+    return name === 'TurnOn' ? 'open_cover' : 'close_cover';
   }
   return name === 'TurnOn' ? 'turn_on' : 'turn_off';
 }
@@ -43,10 +42,9 @@ export async function handleController(event: any): Promise<any> {
   try {
     let command;
 
-    if (namespace === 'Alexa.PowerController' || namespace === 'Alexa.LockController') {
-      // Frunk close is not motorized — return a humorous error instead
-      const isCloseAttempt = name === 'TurnOff' || name === 'Lock';
-      if (domain === 'cover' && coverType === 'FRUNK' && isCloseAttempt) {
+    if (namespace === 'Alexa.ModeController') {
+      const mode: string = event.directive.payload.mode; // 'Position.Open' | 'Position.Closed'
+      if (domain === 'cover' && coverType === 'FRUNK' && mode === 'Position.Closed') {
         const joke = FRUNK_JOKES[Math.floor(Math.random() * FRUNK_JOKES.length)];
         return {
           event: {
@@ -62,7 +60,29 @@ export async function handleController(event: any): Promise<any> {
           },
         };
       }
-
+      command = {
+        domain,
+        service: mode === 'Position.Open' ? 'open_cover' : 'close_cover',
+        entity_id: entityId,
+      };
+    } else if (namespace === 'Alexa.PowerController') {
+      // Frunk close via PowerController fallback
+      if (domain === 'cover' && coverType === 'FRUNK' && name === 'TurnOff') {
+        const joke = FRUNK_JOKES[Math.floor(Math.random() * FRUNK_JOKES.length)];
+        return {
+          event: {
+            header: {
+              namespace: 'Alexa',
+              name: 'ErrorResponse',
+              payloadVersion: '3',
+              messageId: uuidv4(),
+              correlationToken: event.directive.header.correlationToken,
+            },
+            endpoint: { endpointId },
+            payload: { type: 'ENDPOINT_UNREACHABLE', message: joke },
+          },
+        };
+      }
       command = {
         domain,
         service: resolveService(domain, name),
@@ -90,12 +110,13 @@ export async function handleController(event: any): Promise<any> {
 
     await publishCommand(command);
 
-    const context = namespace === 'Alexa.LockController'
+    const context = namespace === 'Alexa.ModeController'
       ? {
           properties: [{
-            namespace: 'Alexa.LockController',
-            name: 'lockState',
-            value: name === 'Unlock' ? 'UNLOCKED' : 'LOCKED',
+            namespace: 'Alexa.ModeController',
+            instance: 'Cover.Position',
+            name: 'mode',
+            value: event.directive.payload.mode,
             timeOfSample: new Date().toISOString(),
             uncertaintyInMilliseconds: 500,
           }],

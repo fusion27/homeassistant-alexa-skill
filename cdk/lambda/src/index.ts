@@ -13,7 +13,7 @@ export async function handler(event: any): Promise<any> {
     case 'Alexa.BrightnessController':
     case 'Alexa.ColorController':
     case 'Alexa.ThermostatController':
-    case 'Alexa.LockController':
+    case 'Alexa.ModeController':
       return handleController(event);
     default:
       console.warn('Unhandled namespace:', namespace);
