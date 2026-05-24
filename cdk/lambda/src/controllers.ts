@@ -2,11 +2,21 @@ import { publishCommand } from './iot';
 import { buildErrorResponse } from './index';
 import { v4 as uuidv4 } from 'uuid';
 
+const TYPE_TO_DOMAIN: Record<string, string> = {
+  SWITCH: 'switch',
+  LIGHT: 'light',
+  LOCK: 'lock',
+  CLIMATE: 'climate',
+  THERMOSTAT: 'climate',
+  SCENE_TRIGGER: 'scene',
+};
+
 export async function handleController(event: any): Promise<any> {
   const namespace: string = event.directive.header.namespace;
   const name: string = event.directive.header.name;
   const endpointId: string = event.directive.endpoint.endpointId;
-  const [domain] = endpointId.split('.');
+  const haType: string | undefined = event.directive.endpoint.cookie?.haType;
+  const domain: string = haType ? (TYPE_TO_DOMAIN[haType] ?? endpointId.split('.')[0]) : endpointId.split('.')[0];
 
   try {
     let command;

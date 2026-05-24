@@ -48,6 +48,7 @@ export async function discovery(event: any): Promise<any> {
     description: `Home Assistant ${e.type.toLowerCase()}`,
     manufacturerName: 'Home Assistant',
     displayCategories: [e.type === 'SWITCH' ? 'SWITCH' : e.type === 'THERMOSTAT' ? 'THERMOSTAT' : 'LIGHT'],
+    cookie: { haType: e.type },
     capabilities: [
       ALEXA_BASE,
       ...e.capabilities.map((cap) => CAPABILITY_DEFINITIONS[cap]).filter(Boolean),
