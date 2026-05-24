@@ -30,6 +30,12 @@ const CAPABILITY_DEFINITIONS: Record<string, object> = {
     version: '3',
     properties: { supported: [{ name: 'color' }], proactivelyReported: false, retrievable: false },
   },
+  LockController: {
+    type: 'AlexaInterface',
+    interface: 'Alexa.LockController',
+    version: '3',
+    properties: { supported: [{ name: 'lockState' }], proactivelyReported: false, retrievable: false },
+  },
 };
 
 const ALEXA_BASE = {
@@ -68,10 +74,9 @@ export async function discovery(event: any): Promise<any> {
     manufacturerName: 'Home Assistant',
     displayCategories: [displayCategory(e)],
     cookie: endpointCookie(e),
-    capabilities: [
-      ALEXA_BASE,
-      ...e.capabilities.map((cap) => CAPABILITY_DEFINITIONS[cap]).filter(Boolean),
-    ],
+    capabilities: e.type === 'COVER'
+      ? [ALEXA_BASE, CAPABILITY_DEFINITIONS['LockController']]
+      : [ALEXA_BASE, ...e.capabilities.map((cap) => CAPABILITY_DEFINITIONS[cap]).filter(Boolean)],
   }));
 
   return {

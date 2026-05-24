@@ -24,7 +24,8 @@ const FRUNK_JOKES = [
 
 function resolveService(domain: string, name: string): string {
   if (domain === 'cover') {
-    return name === 'TurnOn' ? 'open_cover' : 'close_cover';
+    const isOpen = name === 'Unlock' || name === 'TurnOn';
+    return isOpen ? 'open_cover' : 'close_cover';
   }
   return name === 'TurnOn' ? 'turn_on' : 'turn_off';
 }
@@ -42,9 +43,10 @@ export async function handleController(event: any): Promise<any> {
   try {
     let command;
 
-    if (namespace === 'Alexa.PowerController') {
+    if (namespace === 'Alexa.PowerController' || namespace === 'Alexa.LockController') {
       // Frunk close is not motorized — return a humorous error instead
-      if (domain === 'cover' && coverType === 'FRUNK' && name === 'TurnOff') {
+      const isCloseAttempt = name === 'TurnOff' || name === 'Lock';
+      if (domain === 'cover' && coverType === 'FRUNK' && isCloseAttempt) {
         const joke = FRUNK_JOKES[Math.floor(Math.random() * FRUNK_JOKES.length)];
         return {
           event: {
@@ -88,7 +90,17 @@ export async function handleController(event: any): Promise<any> {
 
     await publishCommand(command);
 
-    const context = namespace === 'Alexa.PowerController'
+    const context = namespace === 'Alexa.LockController'
+      ? {
+          properties: [{
+            namespace: 'Alexa.LockController',
+            name: 'lockState',
+            value: name === 'Unlock' ? 'UNLOCKED' : 'LOCKED',
+            timeOfSample: new Date().toISOString(),
+            uncertaintyInMilliseconds: 500,
+          }],
+        }
+      : namespace === 'Alexa.PowerController'
       ? {
           properties: [{
             namespace: 'Alexa.PowerController',
