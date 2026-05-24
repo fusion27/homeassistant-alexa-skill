@@ -13,13 +13,13 @@ const TYPE_TO_DOMAIN: Record<string, string> = {
 };
 
 const FRUNK_JOKES = [
-  "I'm sorry, but the frunk closure actuator is not equipped with a reverse-polarity electromagnetic latch motor. Manual intervention required.",
-  "Negative. The frunk lid reintegration sequence requires biometric confirmation and a minimum of two carbon-fiber-reinforced human appendages.",
-  "Error 418: Frunk closure protocol unavailable. The pneumatic hinge dampener does not support remote re-engagement. Please proceed manually.",
-  "That action is outside my operational parameters. The frunk utilizes a passive gravity-assisted open state with no motorized return-to-closed capability. You're gonna have to touch it.",
-  "Frunk closure via voice command is not supported by the onboard Tesla Fleet API closure subsystem. Kindly apply approximately 15 newtons of downward force to the lid.",
+  "I'm sorry, but the front trunk closure actuator is not equipped with a reverse-polarity electromagnetic latch motor. Manual intervention required.",
+  "Negative. The front trunk lid reintegration sequence requires biometric confirmation and a minimum of two carbon-fiber-reinforced human appendages.",
+  "Error 418: Front trunk closure protocol unavailable. The pneumatic hinge dampener does not support remote re-engagement. Please proceed manually.",
+  "That action is outside my operational parameters. The front trunk utilizes a passive gravity-assisted open state with no motorized return-to-closed capability. You're gonna have to touch it.",
+  "Front trunk closure via voice command is not supported by the onboard Tesla Fleet API closure subsystem. Kindly apply approximately 15 newtons of downward force to the lid.",
   "I've consulted the Tesla Fleet API documentation, three Stack Overflow threads, and two Reddit posts. The consensus is: go push it down yourself.",
-  "Initiating frunk closure... just kidding. There's no motor. That's a you problem.",
+  "Initiating front trunk closure... just kidding. There's no motor. That's a you problem.",
 ];
 
 function resolveService(domain: string, name: string): string {
