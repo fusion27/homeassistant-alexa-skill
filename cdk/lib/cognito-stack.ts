@@ -35,6 +35,11 @@ export class CognitoStack extends cdk.Stack {
       },
       supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
       authFlows: { userPassword: true, userSrp: true },
+      // Cognito maximums. Alexa holds the refresh token; a short lifetime silently breaks account linking.
+      refreshTokenValidity: cdk.Duration.days(3650),
+      accessTokenValidity: cdk.Duration.days(1),
+      idTokenValidity: cdk.Duration.days(1),
+      authSessionValidity: cdk.Duration.minutes(15),
     });
 
     const domain = userPool.addDomain('AlexaDomain', {
