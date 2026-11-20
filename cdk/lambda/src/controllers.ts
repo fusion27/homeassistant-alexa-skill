@@ -21,39 +21,19 @@ function resolveService(domain: string, name: string): string {
   return name === 'TurnOn' ? 'turn_on' : 'turn_off';
 }
 
-interface ResolvedTarget {
-  entityId: string;
-  domain: string;
-  source: 'dynamodb' | 'legacy-cookie';
-}
-
-async function resolveTarget(event: any, exposure: ExposureReader): Promise<ResolvedTarget | undefined> {
-  const endpointId: string = event.directive.endpoint.endpointId;
-  const endpoint: ManifestEntry | undefined = await exposure.getEndpoint(endpointId);
-  if (endpoint !== undefined) {
-    return { entityId: endpoint.entityId, domain: TYPE_TO_DOMAIN[endpoint.type] ?? endpoint.entityId.split('.')[0], source: 'dynamodb' };
-  }
-  // TRANSITIONAL (remove in Slice 2 with the SSM catalog): devices discovered before the
-  // DynamoDB cutover use endpointId = entity_id, or a cover cookie carrying haEntityId.
-  const cookie: { haType?: string; haEntityId?: string } = event.directive.endpoint.cookie ?? {};
-  const legacyEntityId: string | undefined = cookie.haEntityId ?? (endpointId.includes('.') ? endpointId : undefined);
-  if (legacyEntityId === undefined) return undefined;
-  const domain: string = (cookie.haType ? TYPE_TO_DOMAIN[cookie.haType] : undefined) ?? legacyEntityId.split('.')[0];
-  return { entityId: legacyEntityId, domain, source: 'legacy-cookie' };
-}
-
 export async function handleController(event: any, exposure: ExposureReader): Promise<any> {
   const namespace: string = event.directive.header.namespace;
   const name: string = event.directive.header.name;
   const endpointId: string = event.directive.endpoint.endpointId;
 
   try {
-    const target: ResolvedTarget | undefined = await resolveTarget(event, exposure);
-    if (target === undefined) {
+    const endpoint: ManifestEntry | undefined = await exposure.getEndpoint(endpointId);
+    if (endpoint === undefined) {
       return buildErrorResponse(event, 'NO_SUCH_ENDPOINT', `Endpoint ${endpointId} is not exposed`);
     }
-    const { entityId, domain } = target;
-    console.log(JSON.stringify({ msg: 'resolved endpoint', endpointId, entityId, source: target.source }));
+    const entityId: string = endpoint.entityId;
+    const domain: string = TYPE_TO_DOMAIN[endpoint.type] ?? entityId.split('.')[0];
+    console.log(JSON.stringify({ msg: 'resolved endpoint', endpointId, entityId }));
 
     let command;
 

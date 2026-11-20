@@ -7,7 +7,6 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1173.0",
     "@aws-sdk/client-iot-data-plane": "^3.0.0",
-    "@aws-sdk/client-ssm": "^3.0.0",
     "@aws-sdk/lib-dynamodb": "^3.1173.0",
     "uuid": "^9.0.0"
   },

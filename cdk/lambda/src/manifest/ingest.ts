@@ -4,10 +4,14 @@ import { ManifestEntry, ManifestSnapshot, ParseResult, parseManifestSnapshot } f
 
 export interface IngestResult {
   put: number;
+  deleted: number;
   unchanged: number;
 }
 
-/** Writes new or changed entries only, so re-publishing the same snapshot is a no-op. */
+/**
+ * Makes the table match the snapshot: writes new or changed entries and deletes entries
+ * the snapshot no longer contains. Re-publishing the same snapshot is a no-op.
+ */
 export async function ingestSnapshot(
   snapshot: ManifestSnapshot,
   repository: ExposureReader & ExposureWriter,
@@ -22,7 +26,14 @@ export async function ingestSnapshot(
     await repository.putEndpoint(entry);
     put += 1;
   }
-  return { put, unchanged: snapshot.entries.length - put };
+  const wanted = new Set<string>(snapshot.entries.map((e: ManifestEntry) => e.endpointId));
+  let deleted = 0;
+  for (const endpointId of existing.keys()) {
+    if (wanted.has(endpointId)) continue;
+    await repository.deleteEndpoint(endpointId);
+    deleted += 1;
+  }
+  return { put, deleted, unchanged: snapshot.entries.length - put };
 }
 
 const repository = new DynamoExposureRepository(new DynamoDBClient({}), process.env.EXPOSURE_TABLE ?? '');

@@ -1,5 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Capability, EndpointType, ManifestEntry } from './schema';
 
 /** Read side, used by Discovery and controllers. */
@@ -11,6 +11,7 @@ export interface ExposureReader {
 /** Write side, used by manifest ingest. */
 export interface ExposureWriter {
   putEndpoint(entry: ManifestEntry): Promise<void>;
+  deleteEndpoint(endpointId: string): Promise<void>;
 }
 
 const ENDPOINT_PK = 'ENDPOINT';
@@ -80,6 +81,10 @@ export class DynamoExposureRepository implements ExposureReader, ExposureWriter 
       updatedAt: new Date().toISOString(),
     };
     await this.doc.send(new PutCommand({ TableName: this.tableName, Item: item }));
+  }
+
+  async deleteEndpoint(endpointId: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.tableName, Key: { pk: ENDPOINT_PK, sk: endpointId } }));
   }
 }
 

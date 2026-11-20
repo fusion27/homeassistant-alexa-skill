@@ -2,6 +2,8 @@ import * as dotenv from 'dotenv';
 import { ManifestSnapshot } from './contract';
 import { HaRegistryClient } from './ha/registry';
 import { WsHaRegistryClient } from './ha/ws-registry-client';
+import { WsHaChangeWatcher } from './ha/change-watcher';
+import { SyncScheduler } from './sync-scheduler';
 import { BuildResult, buildManifest } from './manifest/builder';
 import { IotManifestPublisher, ManifestPublisher } from './iot/publisher';
 
@@ -22,6 +24,8 @@ const IOT_ENDPOINT: string = requireEnv('IOT_ENDPOINT');
 const CERT_PATH: string = process.env.CERT_PATH ?? '/certs';
 const MANIFEST_TOPIC: string = process.env.MANIFEST_TOPIC ?? 'home/manifest/alexa';
 const EXPOSE_LABEL_ID: string = process.env.EXPOSE_LABEL_ID ?? 'alexa';
+const DEBOUNCE_MS = 5_000;
+const SAFETY_INTERVAL_MS: number = 6 * 60 * 60 * 1000;
 
 function websocketUrl(httpUrl: string): string {
   return `${httpUrl.replace(/^http/, 'ws').replace(/\/$/, '')}/api/websocket`;
@@ -48,13 +52,18 @@ export class ManifestSync {
 }
 
 async function main(): Promise<void> {
+  const wsUrl: string = websocketUrl(HA_URL);
   const sync = new ManifestSync(
-    new WsHaRegistryClient(websocketUrl(HA_URL), HA_TOKEN),
+    new WsHaRegistryClient(wsUrl, HA_TOKEN),
     new IotManifestPublisher({ endpoint: IOT_ENDPOINT, certPath: CERT_PATH, clientId: 'newcombe-manifest-sync', topic: MANIFEST_TOPIC }),
     EXPOSE_LABEL_ID,
   );
+  // Fail fast on startup so Docker restarts the container; later failures are logged and retried.
   await sync.run();
-  // The IoT connection keeps the process alive; Slice 2 adds re-publishing on HA registry events.
+
+  const scheduler = new SyncScheduler(() => sync.run(), DEBOUNCE_MS, SAFETY_INTERVAL_MS);
+  scheduler.start();
+  new WsHaChangeWatcher(wsUrl, HA_TOKEN).start((reason: string) => scheduler.request(reason));
 }
 
 main().catch((err: unknown) => {

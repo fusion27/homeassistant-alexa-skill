@@ -1,7 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { lambdaCode } from './lambda-asset';
@@ -17,19 +16,6 @@ export class LambdaStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: LambdaStackProps) {
     super(scope, id, props);
 
-    const entityCatalogParam = new ssm.StringParameter(this, 'EntityCatalog', {
-      parameterName: '/ha-alexa-skill/entity-catalog',
-      description: 'JSON array of HA entities to expose to Alexa',
-      stringValue: JSON.stringify([
-        {
-          entityId: 'light.example',
-          friendlyName: 'Example Light',
-          type: 'LIGHT',
-          capabilities: ['PowerController', 'BrightnessController'],
-        },
-      ]),
-    });
-
     const role = new iam.Role(this, 'LambdaRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       managedPolicies: [
@@ -42,10 +28,6 @@ export class LambdaStack extends cdk.Stack {
       resources: [`arn:aws:iot:us-east-1:${this.account}:topic/${props.topicPrefix}/*`],
     }));
 
-    role.addToPolicy(new iam.PolicyStatement({
-      actions: ['ssm:GetParameter'],
-      resources: [entityCatalogParam.parameterArn],
-    }));
 
     const fn = new lambda.Function(this, 'AlexaSkillHandler', {
       functionName: 'ha-alexa-skill-handler',
@@ -58,7 +40,6 @@ export class LambdaStack extends cdk.Stack {
       environment: {
         IOT_ENDPOINT: props.iotEndpoint,
         IOT_TOPIC_PREFIX: props.topicPrefix,
-        ENTITY_CATALOG_PARAM: entityCatalogParam.parameterName,
         EXPOSURE_TABLE: props.exposure.tableName,
       },
     });
