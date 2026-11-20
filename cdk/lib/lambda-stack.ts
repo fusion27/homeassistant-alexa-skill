@@ -9,6 +9,7 @@ import { Construct } from 'constructs';
 interface LambdaStackProps extends cdk.StackProps {
   iotEndpoint: string;
   topicPrefix: string;
+  skillId: string;
 }
 
 export class LambdaStack extends cdk.Stack {
@@ -80,7 +81,7 @@ export class LambdaStack extends cdk.Stack {
     fn.addPermission('AlexaSmartHomeTrigger', {
       principal: new iam.ServicePrincipal('alexa-connectedhome.amazon.com'),
       action: 'lambda:InvokeFunction',
-      eventSourceToken: 'amzn1.ask.skill.081f3588-e829-4c0d-b282-10d0dd9ea168',
+      eventSourceToken: props.skillId,
     });
 
     new cdk.CfnOutput(this, 'LambdaArn', {

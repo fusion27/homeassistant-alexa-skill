@@ -2,8 +2,15 @@ import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 
+interface CognitoStackProps extends cdk.StackProps {
+  accountLinkVendorId: string;
+  domainPrefix: string;
+}
+
+const ALEXA_LINK_HOSTS: readonly string[] = ['pitangui.amazon.com', 'layla.amazon.com', 'alexa.amazon.co.jp'];
+
 export class CognitoStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: CognitoStackProps) {
     super(scope, id, props);
 
     const userPool = new cognito.UserPool(this, 'AlexaUserPool', {
@@ -27,11 +34,7 @@ export class CognitoStack extends cdk.Stack {
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.PROFILE],
-        callbackUrls: [
-          'https://pitangui.amazon.com/api/skill/link/M3OPTMKMOBL62Y',
-          'https://layla.amazon.com/api/skill/link/M3OPTMKMOBL62Y',
-          'https://alexa.amazon.co.jp/api/skill/link/M3OPTMKMOBL62Y',
-        ],
+        callbackUrls: ALEXA_LINK_HOSTS.map((host: string): string => `https://${host}/api/skill/link/${props.accountLinkVendorId}`),
       },
       supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
       authFlows: { userPassword: true, userSrp: true },
@@ -43,7 +46,7 @@ export class CognitoStack extends cdk.Stack {
     });
 
     const domain = userPool.addDomain('AlexaDomain', {
-      cognitoDomain: { domainPrefix: 'ha-alexa-skill-690063008832' },
+      cognitoDomain: { domainPrefix: props.domainPrefix },
     });
 
     new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
