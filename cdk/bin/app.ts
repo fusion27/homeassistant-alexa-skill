@@ -3,6 +3,7 @@ import { SSMClient } from '@aws-sdk/client-ssm';
 import { IotStack } from '../lib/iot-stack';
 import { LambdaStack } from '../lib/lambda-stack';
 import { CognitoStack } from '../lib/cognito-stack';
+import { ManifestStack } from '../lib/manifest-stack';
 import { AppConfig, CONFIG_PARAMETER, CONFIG_REGION, SsmConfigSource } from '../lib/config';
 
 async function main(): Promise<void> {
@@ -12,11 +13,17 @@ async function main(): Promise<void> {
   const env: cdk.Environment = { account: config.account, region: CONFIG_REGION };
 
   const iotStack = new IotStack(app, 'HaAlexaIotStack', { env, certArn: config.iot.certArn });
+  const manifestStack = new ManifestStack(app, 'HaAlexaManifestStack', {
+    env,
+    certArn: config.iot.certArn,
+    manifestTopic: config.iot.manifestTopic,
+  });
   new LambdaStack(app, 'HaAlexaLambdaStack', {
     env,
     iotEndpoint: iotStack.iotEndpoint,
     topicPrefix: config.iot.commandTopicPrefix,
     skillId: config.alexa.skillId,
+    exposure: manifestStack.exposure,
   });
   new CognitoStack(app, 'HaAlexaCognitoStack', {
     env,
