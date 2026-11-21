@@ -33,7 +33,6 @@ export class ManifestStack extends cdk.Stack {
       sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
-      // Old images too, so a REMOVE can be reported as a DeleteReport.
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
     });
     this.exposure = table;
@@ -116,7 +115,7 @@ export class ManifestStack extends cdk.Stack {
       retryAttempts: 3,
       bisectBatchOnError: true,
       filters: [lambda.FilterCriteria.filter({
-        eventName: lambda.FilterRule.or('INSERT', 'MODIFY'),
+        eventName: lambda.FilterRule.or('INSERT', 'MODIFY', 'REMOVE'),
         dynamodb: { Keys: { pk: { S: lambda.FilterRule.isEqual('ENDPOINT') } } },
       })],
     }));

@@ -13,6 +13,29 @@ import { HttpLwaClient } from './lwa';
 
 export interface ReportResult {
   addedOrUpdated: string[];
+  deleted: string[];
+}
+
+type FinalState = { kind: 'upsert'; entry: ManifestEntry } | { kind: 'delete'; endpointId: string };
+
+/**
+ * Collapses a batch to each endpoint's last change, in stream order, so an unlabel
+ * followed by a relabel in one batch ends as an upsert, never a delete.
+ */
+function finalStates(records: readonly DynamoDBRecord[]): FinalState[] {
+  const byEndpoint = new Map<string, FinalState>();
+  for (const record of records) {
+    const keys = record.dynamodb?.Keys;
+    if (keys === undefined) continue;
+    const endpointId: string = (unmarshall(keys as Record<string, AttributeValue>) as Pick<EndpointItem, 'sk'>).sk;
+    const image = record.dynamodb?.NewImage;
+    if (record.eventName === 'REMOVE') {
+      byEndpoint.set(endpointId, { kind: 'delete', endpointId });
+    } else if (image !== undefined) {
+      byEndpoint.set(endpointId, { kind: 'upsert', entry: toEntry(unmarshall(image as Record<string, AttributeValue>) as EndpointItem) });
+    }
+  }
+  return [...byEndpoint.values()];
 }
 
 /** Turns Exposure table changes into proactive Alexa discovery events. */
@@ -20,19 +43,25 @@ export class ChangeReporter {
   constructor(private readonly gateway: AlexaEventGateway) {}
 
   async report(records: readonly DynamoDBRecord[]): Promise<ReportResult> {
-    const upserted: ManifestEntry[] = records
-      .filter((r: DynamoDBRecord) => r.eventName === 'INSERT' || r.eventName === 'MODIFY')
-      .flatMap((r: DynamoDBRecord) => {
-        const image = r.dynamodb?.NewImage;
-        return image === undefined ? [] : [toEntry(unmarshall(image as Record<string, AttributeValue>) as EndpointItem)];
-      });
+    const states: FinalState[] = finalStates(records);
+    const upserted: ManifestEntry[] = states.flatMap((s: FinalState) => (s.kind === 'upsert' ? [s.entry] : []));
+    const deleted: string[] = states.flatMap((s: FinalState) => (s.kind === 'delete' ? [s.endpointId] : []));
     if (upserted.length > 0) {
       await this.gateway.send(
         { namespace: 'Alexa.Discovery', name: 'AddOrUpdateReport' },
         { endpoints: upserted.map(buildEndpoint) },
       );
     }
-    return { addedOrUpdated: upserted.map((e: ManifestEntry) => `${e.entityId} as "${e.friendlyName}"`) };
+    if (deleted.length > 0) {
+      await this.gateway.send(
+        { namespace: 'Alexa.Discovery', name: 'DeleteReport' },
+        { endpoints: deleted.map((endpointId: string) => ({ endpointId })) },
+      );
+    }
+    return {
+      addedOrUpdated: upserted.map((e: ManifestEntry) => `${e.entityId} as "${e.friendlyName}"`),
+      deleted,
+    };
   }
 }
 
