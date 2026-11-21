@@ -1,9 +1,18 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { SSMClient } from '@aws-sdk/client-ssm';
 import { discovery } from './discovery';
 import { handleController } from './controllers';
 import { DynamoExposureRepository, ExposureReader } from './manifest/repository';
+import { acceptGrant } from './alexa/accept-grant';
+import { DynamoGrantStore, GrantStore } from './alexa/grant-store';
+import { HttpLwaClient, LwaClient } from './alexa/lwa';
+import { SsmCredentialsSource } from './alexa/credentials';
 
-const exposure: ExposureReader = new DynamoExposureRepository(new DynamoDBClient({}), process.env.EXPOSURE_TABLE ?? '');
+const dynamo = new DynamoDBClient({});
+const tableName: string = process.env.EXPOSURE_TABLE ?? '';
+const exposure: ExposureReader = new DynamoExposureRepository(dynamo, tableName);
+const grants: GrantStore = new DynamoGrantStore(dynamo, tableName);
+const lwa: LwaClient = new HttpLwaClient(new SsmCredentialsSource(new SSMClient({}), process.env.CONFIG_PARAMETER ?? ''));
 
 export async function handler(event: any): Promise<any> {
   const namespace: string = event?.directive?.header?.namespace ?? '';
@@ -18,6 +27,8 @@ export async function handler(event: any): Promise<any> {
   switch (namespace) {
     case 'Alexa.Discovery':
       return discovery(exposure);
+    case 'Alexa.Authorization':
+      return acceptGrant(event, lwa, grants);
     case 'Alexa.PowerController':
     case 'Alexa.BrightnessController':
     case 'Alexa.ColorController':

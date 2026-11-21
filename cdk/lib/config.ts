@@ -23,11 +23,18 @@ export interface CognitoConfig {
   domainPrefix: string;
 }
 
+/** Sensitive. Never pass into a stack; Lambdas read it from the parameter at runtime. */
+export interface SkillMessagingConfig {
+  clientId: string;
+  clientSecret: string;
+}
+
 export interface AppConfig {
   account: string;
   iot: IotConfig;
   alexa: AlexaConfig;
   cognito: CognitoConfig;
+  skillMessaging: SkillMessagingConfig;
 }
 
 export interface ConfigSource {
@@ -59,6 +66,7 @@ export function parseAppConfig(raw: unknown): AppConfig {
   const iot: JsonObject = requireObject(raw, 'iot', '');
   const alexa: JsonObject = requireObject(raw, 'alexa', '');
   const cognito: JsonObject = requireObject(raw, 'cognito', '');
+  const skillMessaging: JsonObject = requireObject(raw, 'skillMessaging', '');
   return {
     account: requireString(raw, 'account', ''),
     iot: {
@@ -72,6 +80,10 @@ export function parseAppConfig(raw: unknown): AppConfig {
     },
     cognito: {
       domainPrefix: requireString(cognito, 'domainPrefix', 'cognito.'),
+    },
+    skillMessaging: {
+      clientId: requireString(skillMessaging, 'clientId', 'skillMessaging.'),
+      clientSecret: requireString(skillMessaging, 'clientSecret', 'skillMessaging.'),
     },
   };
 }

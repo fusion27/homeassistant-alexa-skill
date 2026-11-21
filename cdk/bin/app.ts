@@ -17,6 +17,7 @@ async function main(): Promise<void> {
     env,
     certArn: config.iot.certArn,
     manifestTopic: config.iot.manifestTopic,
+    configParameter: CONFIG_PARAMETER,
   });
   new LambdaStack(app, 'HaAlexaLambdaStack', {
     env,
@@ -24,6 +25,7 @@ async function main(): Promise<void> {
     topicPrefix: config.iot.commandTopicPrefix,
     skillId: config.alexa.skillId,
     exposure: manifestStack.exposure,
+    configParameter: CONFIG_PARAMETER,
   });
   new CognitoStack(app, 'HaAlexaCognitoStack', {
     env,

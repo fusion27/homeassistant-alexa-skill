@@ -4,12 +4,14 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { lambdaCode } from './lambda-asset';
+import { grantAlexaGrantAccess, grantConfigRead } from './alexa-grant-access';
 
 interface LambdaStackProps extends cdk.StackProps {
   iotEndpoint: string;
   topicPrefix: string;
   skillId: string;
   exposure: dynamodb.ITable;
+  configParameter: string;
 }
 
 export class LambdaStack extends cdk.Stack {
@@ -41,10 +43,14 @@ export class LambdaStack extends cdk.Stack {
         IOT_ENDPOINT: props.iotEndpoint,
         IOT_TOPIC_PREFIX: props.topicPrefix,
         EXPOSURE_TABLE: props.exposure.tableName,
+        CONFIG_PARAMETER: props.configParameter,
       },
     });
 
     props.exposure.grantReadData(role);
+    // AcceptGrant: exchange the code with the Skill Messaging secret and store the tokens.
+    grantAlexaGrantAccess(role, props.exposure);
+    grantConfigRead(this, role, props.configParameter);
 
     fn.addPermission('AlexaSmartHomeTrigger', {
       principal: new iam.ServicePrincipal('alexa-connectedhome.amazon.com'),

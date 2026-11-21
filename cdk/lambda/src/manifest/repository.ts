@@ -14,9 +14,10 @@ export interface ExposureWriter {
   deleteEndpoint(endpointId: string): Promise<void>;
 }
 
-const ENDPOINT_PK = 'ENDPOINT';
+export const ENDPOINT_PK = 'ENDPOINT';
 
-interface EndpointItem {
+/** Stored shape of an ENDPOINT item; DynamoDB Stream images unmarshal to this too. */
+export interface EndpointItem {
   pk: typeof ENDPOINT_PK;
   sk: string;
   entityId: string;
@@ -26,7 +27,7 @@ interface EndpointItem {
   updatedAt: string;
 }
 
-function toEntry(item: EndpointItem): ManifestEntry {
+export function toEntry(item: EndpointItem): ManifestEntry {
   return {
     endpointId: item.sk,
     entityId: item.entityId,
