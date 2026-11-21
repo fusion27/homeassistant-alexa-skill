@@ -1,17 +1,8 @@
-import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { v4 as uuidv4 } from 'uuid';
+import { Capability, ManifestEntry } from './manifest/schema';
+import { ExposureReader } from './manifest/repository';
 
-const ssm = new SSMClient({ region: 'us-east-1' });
-
-interface EntityConfig {
-  entityId: string;
-  friendlyName: string;
-  type: 'LIGHT' | 'SWITCH' | 'THERMOSTAT' | 'SCENE_TRIGGER' | 'COVER';
-  coverType?: 'FRUNK' | 'TRUNK';
-  capabilities: string[];
-}
-
-const CAPABILITY_DEFINITIONS: Record<string, object> = {
+const CAPABILITY_DEFINITIONS: Record<Capability, object> = {
   PowerController: {
     type: 'AlexaInterface',
     interface: 'Alexa.PowerController',
@@ -37,10 +28,6 @@ const ALEXA_BASE = {
   interface: 'Alexa',
   version: '3',
 };
-
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
 
 const COVER_MODE_CONTROLLER = {
   type: 'AlexaInterface',
@@ -83,36 +70,29 @@ const COVER_MODE_CONTROLLER = {
   },
 };
 
-function displayCategory(e: EntityConfig): string {
+function displayCategory(e: ManifestEntry): string {
   if (e.type === 'COVER') return 'OTHER';
   if (e.type === 'SWITCH') return 'SWITCH';
   if (e.type === 'THERMOSTAT') return 'THERMOSTAT';
   return 'LIGHT';
 }
 
-function endpointCookie(e: EntityConfig): Record<string, string> {
-  if (e.type === 'COVER') {
-    return { haType: e.type, haEntityId: e.entityId, coverType: e.coverType ?? '' };
-  }
-  return { haType: e.type };
-}
-
-export async function discovery(event: any): Promise<any> {
-  const paramName = process.env.ENTITY_CATALOG_PARAM!;
-  const result = await ssm.send(new GetParameterCommand({ Name: paramName }));
-  const entities: EntityConfig[] = JSON.parse(result.Parameter?.Value ?? '[]');
-
-  const endpoints = entities.map((e) => ({
-    endpointId: e.type === 'COVER' ? slugify(e.friendlyName) : e.entityId,
+/** Alexa endpoint definition for one manifest entry. Shared by Discovery and proactive reports. */
+export function buildEndpoint(e: ManifestEntry): object {
+  return {
+    endpointId: e.endpointId,
     friendlyName: e.friendlyName,
     description: `Home Assistant ${e.type.toLowerCase()}`,
     manufacturerName: 'Home Assistant',
     displayCategories: [displayCategory(e)],
-    cookie: endpointCookie(e),
     capabilities: e.type === 'COVER'
       ? [ALEXA_BASE, COVER_MODE_CONTROLLER]
-      : [ALEXA_BASE, ...e.capabilities.map((cap) => CAPABILITY_DEFINITIONS[cap]).filter(Boolean)],
-  }));
+      : [ALEXA_BASE, ...e.capabilities.map((cap: Capability) => CAPABILITY_DEFINITIONS[cap])],
+  };
+}
+
+export async function discovery(exposure: ExposureReader): Promise<object> {
+  const endpoints: object[] = (await exposure.listEndpoints()).map(buildEndpoint);
 
   return {
     event: {

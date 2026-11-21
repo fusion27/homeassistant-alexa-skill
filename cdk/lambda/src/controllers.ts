@@ -1,6 +1,8 @@
 import { publishCommand } from './iot';
 import { buildErrorResponse } from './index';
 import { v4 as uuidv4 } from 'uuid';
+import { ExposureReader } from './manifest/repository';
+import { ManifestEntry } from './manifest/schema';
 
 const TYPE_TO_DOMAIN: Record<string, string> = {
   SWITCH: 'switch',
@@ -19,16 +21,20 @@ function resolveService(domain: string, name: string): string {
   return name === 'TurnOn' ? 'turn_on' : 'turn_off';
 }
 
-export async function handleController(event: any): Promise<any> {
+export async function handleController(event: any, exposure: ExposureReader): Promise<any> {
   const namespace: string = event.directive.header.namespace;
   const name: string = event.directive.header.name;
   const endpointId: string = event.directive.endpoint.endpointId;
-  const cookie = event.directive.endpoint.cookie ?? {};
-  const haType: string | undefined = cookie.haType;
-  const entityId: string = cookie.haEntityId ?? endpointId;
-  const domain: string = haType ? (TYPE_TO_DOMAIN[haType] ?? endpointId.split('.')[0]) : endpointId.split('.')[0];
 
   try {
+    const endpoint: ManifestEntry | undefined = await exposure.getEndpoint(endpointId);
+    if (endpoint === undefined) {
+      return buildErrorResponse(event, 'NO_SUCH_ENDPOINT', `Endpoint ${endpointId} is not exposed`);
+    }
+    const entityId: string = endpoint.entityId;
+    const domain: string = TYPE_TO_DOMAIN[endpoint.type] ?? entityId.split('.')[0];
+    console.log(JSON.stringify({ msg: 'resolved endpoint', endpointId, entityId }));
+
     let command;
 
     if (namespace === 'Alexa.ModeController') {

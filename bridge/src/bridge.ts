@@ -47,12 +47,25 @@ function buildDevice(): iot.mqtt5.Mqtt5Client {
   return new iot.mqtt5.Mqtt5Client(builder.build());
 }
 
+async function subscribe(client: iot.mqtt5.Mqtt5Client): Promise<void> {
+  await client.subscribe({
+    subscriptions: [{ topicFilter: `${TOPIC_PREFIX}/#`, qos: iot.mqtt5.QoS.AtLeastOnce }]
+  });
+  console.log(`[Bridge] Subscribed to ${TOPIC_PREFIX}/#`);
+}
+
 async function main(): Promise<void> {
   console.log('[Bridge] Starting HA Alexa MQTT bridge...');
   const client = buildDevice();
 
   client.on('connectionSuccess', () => {
     console.log('[IoT] Connected to AWS IoT Core');
+    // IoT Core discards subscriptions on every reconnect (clean session), so the
+    // subscription must be re-established each time — not just once at startup.
+    // Without this the bridge stays "connected" but silently receives nothing.
+    subscribe(client).catch((err) => {
+      console.error('[Bridge] Re-subscribe failed:', err);
+    });
   });
 
   client.on('connectionFailure', (event) => {
@@ -81,11 +94,7 @@ async function main(): Promise<void> {
 
   await client.start();
 
-  await client.subscribe({
-    subscriptions: [{ topicFilter: `${TOPIC_PREFIX}/#`, qos: iot.mqtt5.QoS.AtLeastOnce }]
-  });
-
-  console.log(`[Bridge] Subscribed to ${TOPIC_PREFIX}/#`);
+  // Subscription is established by the connectionSuccess handler above.
   console.log('[Bridge] Waiting for commands...');
 }
 
