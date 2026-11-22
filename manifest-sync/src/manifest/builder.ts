@@ -21,6 +21,8 @@ type DomainMapper = (state: EntityState | undefined) => AlexaShape;
 
 const DOMAIN_MAPPERS: Readonly<Record<string, DomainMapper>> = {
   switch: (): AlexaShape => ({ type: 'SWITCH', capabilities: ['PowerController'] }),
+  // HA scenes only set device states; there is no "off", so Alexa gets activate-only.
+  scene: (): AlexaShape => ({ type: 'SCENE_TRIGGER', capabilities: ['SceneController'] }),
 };
 
 function spokenName(entity: RegistryEntity, state: EntityState | undefined): string {

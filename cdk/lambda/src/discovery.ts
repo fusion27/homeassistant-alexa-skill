@@ -21,6 +21,12 @@ const CAPABILITY_DEFINITIONS: Record<Capability, object> = {
     version: '3',
     properties: { supported: [{ name: 'color' }], proactivelyReported: false, retrievable: false },
   },
+  SceneController: {
+    type: 'AlexaInterface',
+    interface: 'Alexa.SceneController',
+    version: '3',
+    supportsDeactivation: false,
+  },
 };
 
 const ALEXA_BASE = {
@@ -74,6 +80,7 @@ function displayCategory(e: ManifestEntry): string {
   if (e.type === 'COVER') return 'OTHER';
   if (e.type === 'SWITCH') return 'SWITCH';
   if (e.type === 'THERMOSTAT') return 'THERMOSTAT';
+  if (e.type === 'SCENE_TRIGGER') return 'SCENE_TRIGGER';
   return 'LIGHT';
 }
 
