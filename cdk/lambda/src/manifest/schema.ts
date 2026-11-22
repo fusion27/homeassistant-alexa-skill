@@ -5,7 +5,7 @@
 export const ENDPOINT_TYPES = ['LIGHT', 'SWITCH', 'THERMOSTAT', 'SCENE_TRIGGER', 'COVER'] as const;
 export type EndpointType = typeof ENDPOINT_TYPES[number];
 
-export const CAPABILITIES = ['PowerController', 'BrightnessController', 'ColorController'] as const;
+export const CAPABILITIES = ['PowerController', 'BrightnessController', 'ColorController', 'SceneController'] as const;
 export type Capability = typeof CAPABILITIES[number];
 
 export interface ManifestEntry {

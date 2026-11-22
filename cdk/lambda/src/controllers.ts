@@ -37,7 +37,13 @@ export async function handleController(event: any, exposure: ExposureReader): Pr
 
     let command;
 
-    if (namespace === 'Alexa.ModeController') {
+    if (namespace === 'Alexa.SceneController') {
+      // Discovery declares supportsDeactivation: false, so only Activate is expected.
+      if (name !== 'Activate') {
+        return buildErrorResponse(event, 'INVALID_DIRECTIVE', `Scenes can only be activated, not ${name}`);
+      }
+      command = { domain: 'scene', service: 'turn_on', entity_id: entityId };
+    } else if (namespace === 'Alexa.ModeController') {
       const mode: string = event.directive.payload.mode; // 'Position.Open' | 'Position.Closed'
       command = {
         domain,
@@ -71,6 +77,8 @@ export async function handleController(event: any, exposure: ExposureReader): Pr
     }
 
     await publishCommand(command);
+
+    if (namespace === 'Alexa.SceneController') return activationStarted(event, endpointId);
 
     const context = namespace === 'Alexa.ModeController'
       ? {
@@ -113,4 +121,25 @@ export async function handleController(event: any, exposure: ExposureReader): Pr
     console.error('[Controller] Error:', err);
     return buildErrorResponse(event, 'INTERNAL_ERROR', String(err));
   }
+}
+
+/** Scenes answer with their own event instead of Alexa.Response. */
+function activationStarted(event: any, endpointId: string): object {
+  return {
+    context: {},
+    event: {
+      header: {
+        namespace: 'Alexa.SceneController',
+        name: 'ActivationStarted',
+        messageId: uuidv4(),
+        correlationToken: event.directive.header.correlationToken,
+        payloadVersion: '3',
+      },
+      endpoint: { endpointId },
+      payload: {
+        cause: { type: 'VOICE_INTERACTION' },
+        timestamp: new Date().toISOString(),
+      },
+    },
+  };
 }

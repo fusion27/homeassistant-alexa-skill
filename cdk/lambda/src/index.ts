@@ -34,6 +34,7 @@ export async function handler(event: any): Promise<any> {
     case 'Alexa.ColorController':
     case 'Alexa.ThermostatController':
     case 'Alexa.ModeController':
+    case 'Alexa.SceneController':
       return handleController(event, exposure);
     default:
       console.warn('Unhandled namespace:', namespace);
